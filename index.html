@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#121214] text-slate-100 min-h-screen flex flex-col font-sans select-none antialiased">
-  <div id="root" class="flex-1 flex flex-col max-w-md mx-auto w-full pb-28"></div>
+  <div id="root" class="flex-1 flex flex-col max-w-md mx-auto w-full pb-32"></div>
 
   <script type="text/babel">
     function App() {
@@ -21,69 +21,88 @@
       const [caption, setCaption] = React.useState('');
       const [imageUrl, setImageUrl] = React.useState('');
       const [loading, setLoading] = React.useState(false);
-      const [savedCaptions, setSavedCaptions] = React.useState([]);
+      const [isSaved, setIsSaved] = React.useState(false);
+      const [toast, setToast] = React.useState('');
+
+      // मेमरीमधून सेव्ह केलेली कॅप्शन्स लोड करणे
+      const [savedCaptions, setSavedCaptions] = React.useState(() => {
+        try {
+          const localData = localStorage.getItem('studio_saved_captions');
+          return localData ? JSON.parse(localData) : [];
+        } catch (e) {
+          return [];
+        }
+      });
+
+      // मेसेज/टोस्ट दाखवण्यासाठी
+      const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(''), 2500);
+      };
 
       // टॉपिक निवडण्यासाठी 'Ideas' चे वर्गीकरण
       const topicCategories = [
         {
           category: "🐾 मजेदार आणि पाळीव प्राणी (Pets & Fun)",
           items: [
-            { title: "Funny cute cat", desc: "मजेदार खोडकर मांजर" },
-            { title: "Puppy playing in garden", desc: "बागेत खेळणारे गोड कुत्र्याचे पिल्लू" },
-            { title: "Weekend mood funny", desc: "रविवारचा निवांत आणि फनी मूड" }
+            { title: "Funny cute cats playing", desc: "मजेदार खोडकर मांजरी" },
+            { title: "Puppy running in rain", desc: "पावसात बागडणारे गोड कुत्र्याचे पिल्लू" },
+            { title: "Weekend chill and funny mood", desc: "रविवारचा निवांत आणि फनी मूड" }
           ]
         },
         {
           category: "☕ खाद्यसंस्कृती आणि चहा (Food & Chai)",
           items: [
-            { title: "Monsoon cutting chai and pakoda", desc: "पावसाळा, गरमागरम भजी आणि कटिंग चहा" },
-            { title: "Traditional Indian thali feast", desc: "भरगच्च स्वादिष्ट भारतीय जेवणाचे ताट" },
-            { title: "Cozy coffee book cafe", desc: "कॅफे, कॉफी आणि आवडते पुस्तक" }
+            { title: "Monsoon hot cutting chai with pakoda", desc: "पावसाळा, गरमागरम भजी आणि कटिंग चहा" },
+            { title: "Traditional Maharashtrian misal pav", desc: "झणझणीत मिसळ आणि चविष्ट नाश्ता" },
+            { title: "Peaceful coffee and reading book", desc: "शांत वातावरणात कॉफी आणि वाचन" }
           ]
         },
         {
           category: "⛰️ निसर्ग आणि प्रवास (Nature & Travel)",
           items: [
-            { title: "Sahyadri mountain misty trek", desc: "सह्याद्रीच्या डोंगररांगा आणि धुक्याची चादर" },
-            { title: "Golden sunset at the beach", desc: "समुद्रकिनाऱ्यावरील विलोभनीय सूर्यास्त" },
-            { title: "Night sky full of stars", desc: "ताऱ्यांनी भरलेले शांत रात्रीचे आकाश" }
+            { title: "Misty Sahyadri mountain trekking", desc: "सह्याद्रीच्या डोंगररांगा आणि धुक्याची चादर" },
+            { title: "Sunset at sea beach with waves", desc: "समुद्रकिनाऱ्यावरील शांत विलोभनीय सूर्यास्त" },
+            { title: "Calm star filled night camping", desc: "ताऱ्यांनी भरलेले शांत रात्रीचे आकाश" }
           ]
         },
         {
           category: "✨ सण आणि संस्कृती (Festivals & Vibes)",
           items: [
-            { title: "Diwali lights and colorful rangoli", desc: "दिवाळीच्या दिव्यांची रोषणाई आणि रांगोळी" },
-            { title: "Ganesh utsav dhol tasha", desc: "गणेशोत्सवाचा गजर आणि ढोल ताशा" },
-            { title: "Morning fitness gym workout", desc: "सकाळचा व्यायाम आणि नवी ऊर्जा" }
+            { title: "Diwali lights, clay diya and rangoli", desc: "दिवाळीच्या दिव्यांची रोषणाई आणि रांगोळी" },
+            { title: "Ganesh festival dhol tasha celebration", desc: "गणेशोत्सवाचा गजर आणि ढोल ताशा" },
+            { title: "Morning fitness gym workout grind", desc: "सकाळचा व्यायाम आणि नवी ऊर्जा" }
           ]
         }
       ];
 
-      // आयडिया निवडून थेट मुख्य इनपुटमध्ये टाकणे
+      // आयडिया निवडून थेट इनपुटमध्ये टाकून 'Create' स्क्रीनवर जाणे
       const selectIdeaTopic = (selectedTitle) => {
         setTopic(selectedTitle);
         setActiveTab('create');
+        showToast('विषय निवडला गेला आहे!');
       };
 
       // कॅप्शन आणि इमेज जनरेट करणे
       const handleGenerate = () => {
         if (!topic.trim()) {
-          alert('कृपया आधी विषय टाका किंवा Ideas मधून निवडा!');
+          showToast('कृपया आधी विषय टाईप करा!');
           return;
         }
 
         setLoading(true);
+        setIsSaved(false);
         const cleanTopic = topic.trim();
-        const generatedImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanTopic + ' high quality masterpiece photography')}?width=800&height=550&nologo=true&seed=${Date.now()}`;
+        const generatedImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanTopic + ' high quality realistic photography')}?width=800&height=550&nologo=true&seed=${Date.now()}`;
 
         setTimeout(() => {
           let text = '';
           const tag = cleanTopic.replace(/[^a-zA-Z0-9]/g, '');
 
           if (language === 'mr') {
-            text = `"${cleanTopic}"\n\nनिसर्गाच्या सुंदर रंगात आणि आयुष्याच्या या गोड क्षणात मनसोक्त जगा! प्रत्येक दिवसाची सुरुवात एका नव्या उमेदीने करा. ✨🌿\n\n#मराठी #${tag || 'Trending'} #DailyVibes #जीवन`;
+            text = `"${cleanTopic}"\n\nजीवनातील प्रत्येक क्षणात आनंद आणि हास्य शोधण्याची हीच खरी मजा आहे! मनसोक्त जगा आणि आनंद पसरवा. ✨🌿\n\n#मराठी #${tag || 'Trending'} #DailyVibes #LifeMoments`;
           } else if (language === 'hi') {
-            text = `"${cleanTopic}"\n\nजिंदगी की असली खूबसूरती ऐसी ही छोटी-छोटी खुशियों में बसी होती है। मुस्कुराइए और हर पल को दिल से जिएं! 🌸💫\n\n#हिंदी #${tag || 'Trending'} #GoodVibes #Viral`;
+            text = `"${cleanTopic}"\n\nमुस्कुराते रहिए, क्योंकि जिंदगी की असली खूबसूरती ऐसी ही छोटी-छोटी खुशियों में बसी होती है! 🌸💫\n\n#हिंदी #${tag || 'Trending'} #GoodVibes #Viral`;
           } else {
             text = `Captivating visual story for "${cleanTopic}"!\n\nEmbracing serene moments and finding magic in everyday life. Keep smiling, stay inspired, and let the good vibes flow! 🌟✨\n\n#${tag || 'Trending'} #InstaDaily #Explore #Visuals`;
           }
@@ -94,36 +113,59 @@
         }, 1100);
       };
 
-      // कॅप्शन सेव्ह करणे
-      const saveCaption = () => {
+      // कॅप्शन फोनमध्ये सेव्ह करणे (Save Button Logic)
+      const handleSave = () => {
         if (!caption) return;
-        setSavedCaptions([
-          { topic, caption, imageUrl, id: Date.now(), date: new Date().toLocaleDateString() },
-          ...savedCaptions
-        ]);
-        alert('कॅप्शन "Saved" टॅबमध्ये सुरक्षित केले आहे!');
+        const newItem = {
+          id: Date.now(),
+          topic: topic.trim() || 'Untitled Post',
+          caption,
+          imageUrl,
+          date: new Date().toLocaleDateString('mr-IN')
+        };
+
+        const updatedList = [newItem, ...savedCaptions];
+        setSavedCaptions(updatedList);
+        localStorage.setItem('studio_saved_captions', JSON.stringify(updatedList));
+        setIsSaved(true);
+        showToast('✅ कॅप्शन सुरक्षित सेव्ह केले!');
+      };
+
+      // सेव्ह केलेले कॅप्शन हटवणे (Delete)
+      const handleDeleteSaved = (id) => {
+        const filtered = savedCaptions.filter(item => item.id !== id);
+        setSavedCaptions(filtered);
+        localStorage.setItem('studio_saved_captions', JSON.stringify(filtered));
+        showToast('कॅप्शन हटवले!');
+      };
+
+      // क्लिपबोर्डवर कॉपी करणे
+      const handleCopy = (text) => {
+        navigator.clipboard.writeText(text);
+        showToast('📋 कॅप्शन कॉपी झाले!');
       };
 
       return (
         <div className="flex flex-col min-h-screen">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/80 sticky top-0 bg-[#121214]/90 backdrop-blur z-20">
+          {/* TOAST NOTIFICATION */}
+          {toast && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-2xl transition">
+              {toast}
+            </div>
+          )}
+
+          {/* HEADER (Publish बटण काढून टाकले आहे) */}
+          <div className="flex items-center px-5 py-4 border-b border-neutral-800/80 sticky top-0 bg-[#121214]/90 backdrop-blur z-20">
             <div className="flex items-center gap-2">
-              <span className="text-neutral-400 cursor-pointer">‹</span>
+              <span className="text-neutral-400 text-lg">‹</span>
               <div className="w-6 h-6 rounded-md bg-purple-600 flex items-center justify-center text-xs">🎴</div>
               <h1 className="font-semibold text-base tracking-wide flex items-center gap-1">
                 Caption Studio <span className="text-xs text-neutral-400">▾</span>
               </h1>
             </div>
-            <button 
-              onClick={() => alert('पब्लिश फीचर लवकरच उपलब्ध होईल!')}
-              className="bg-cyan-200 text-neutral-900 font-semibold px-4 py-1.5 rounded-full text-xs hover:bg-cyan-100 transition"
-            >
-              Publish
-            </button>
           </div>
 
-          {/* MAIN TAB: CREATE */}
+          {/* TAB 1: CREATE (मुख्य स्क्रीन) */}
           {activeTab === 'create' && (
             <div className="px-5 pt-4 flex-1">
               <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
@@ -167,7 +209,7 @@
                 <button 
                   onClick={handleGenerate}
                   disabled={loading}
-                  className="w-full bg-purple-600 hover:bg-purple-500 active:scale-[0.99] text-white font-medium py-3 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-50 text-sm"
+                  className="w-full bg-purple-600 hover:bg-purple-500 active:scale-[0.99] text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-50 text-sm"
                 >
                   <span>✨</span> {loading ? 'Generating...' : 'Generate Caption'}
                 </button>
@@ -177,32 +219,37 @@
               {caption ? (
                 <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Your Caption</span>
+                    <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">YOUR CAPTION</span>
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => { navigator.clipboard.writeText(caption); alert('कॉपी झाले!'); }}
-                        className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1 rounded-md transition"
+                        onClick={() => handleCopy(caption)}
+                        className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-1.5 rounded-lg transition"
                       >
                         📋 Copy
                       </button>
                       <button 
-                        onClick={saveCaption}
-                        className="text-xs bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 px-2.5 py-1 rounded-md transition"
+                        onClick={handleSave}
+                        disabled={isSaved}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
+                          isSaved 
+                            ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/30' 
+                            : 'bg-purple-600/30 text-purple-300 hover:bg-purple-600/50'
+                        }`}
                       >
-                        🔖 Save
+                        {isSaved ? '✓ Saved' : '🔖 Save'}
                       </button>
                     </div>
                   </div>
                   <textarea 
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
-                    rows={4}
+                    rows={5}
                     className="w-full bg-[#161619] p-3 rounded-xl border border-neutral-800 text-sm text-neutral-200 resize-none focus:outline-none mb-4"
                   />
 
                   {imageUrl && (
                     <div className="rounded-xl overflow-hidden border border-neutral-800">
-                      <img src={imageUrl} alt="Generated visual" className="w-full h-52 object-cover" />
+                      <img src={imageUrl} alt="Generated visual" className="w-full h-56 object-cover" />
                     </div>
                   )}
                 </div>
@@ -218,7 +265,69 @@
             </div>
           )}
 
-          {/* TAB 2: IDEAS (टॉपिक निवडण्यासाठी स्क्रीन) */}
+          {/* TAB 2: SAVED (सेव्ह केलेली सर्व कॅप्शन्स) */}
+          {activeTab === 'saved' && (
+            <div className="px-5 pt-4 flex-1">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
+                    <span>🔖</span> Saved Captions
+                  </h2>
+                  <p className="text-xs text-neutral-400">तुम्ही सेव्ह केलेली कॅप्शन्स</p>
+                </div>
+                {savedCaptions.length > 0 && (
+                  <span className="text-xs bg-purple-600/20 text-purple-300 px-2.5 py-1 rounded-full border border-purple-500/20">
+                    {savedCaptions.length} सेव्हड्
+                  </span>
+                )}
+              </div>
+
+              {savedCaptions.length === 0 ? (
+                <div className="text-center py-20 text-neutral-500">
+                  <p className="text-4xl mb-3">📂</p>
+                  <p className="text-sm font-medium text-neutral-300 mb-1">अजून कोणतेही कॅप्शन सेव्ह केलेले नाही</p>
+                  <p className="text-xs text-neutral-500 mb-5">कॅप्शन जनरेट केल्यावर "🔖 Save" बटण दाबा.</p>
+                  <button 
+                    onClick={() => setActiveTab('create')}
+                    className="bg-purple-600 text-white text-xs px-4 py-2 rounded-xl"
+                  >
+                    + नवीन कॅप्शन तयार करा
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {savedCaptions.map((item) => (
+                    <div key={item.id} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800 shadow-md">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-semibold text-purple-400 truncate max-w-[200px]">{item.topic}</span>
+                        <span className="text-[10px] text-neutral-500">{item.date}</span>
+                      </div>
+                      <p className="text-xs text-neutral-300 mb-3 whitespace-pre-line leading-relaxed">{item.caption}</p>
+                      {item.imageUrl && (
+                        <img src={item.imageUrl} alt="saved visual" className="w-full h-40 object-cover rounded-xl mb-3 border border-neutral-800" />
+                      )}
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleCopy(item.caption)}
+                          className="flex-1 bg-[#27272c] hover:bg-[#323238] text-xs py-2 rounded-lg text-neutral-200 transition"
+                        >
+                          📋 कॉपी करा
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteSaved(item.id)}
+                          className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs px-3 py-2 rounded-lg transition"
+                        >
+                          🗑️ हटवा
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: IDEAS (टॉपिक निवडण्यासाठी स्क्रीन) */}
           {activeTab === 'ideas' && (
             <div className="px-5 pt-4 flex-1">
               <div className="mb-4">
@@ -228,7 +337,7 @@
                 <p className="text-xs text-neutral-400">खालीलपैकी कोणत्याही विषयावर क्लिक करा, तो आपोआप निवडला जाईल.</p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {topicCategories.map((cat, idx) => (
                   <div key={idx} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800">
                     <h3 className="text-xs font-semibold text-purple-400 mb-3 tracking-wide">{cat.category}</h3>
@@ -243,7 +352,7 @@
                             <p className="text-sm font-medium text-neutral-200 group-hover:text-purple-300">{item.title}</p>
                             <p className="text-xs text-neutral-400">{item.desc}</p>
                           </div>
-                          <span className="text-xs text-purple-400">वापरा ➔</span>
+                          <span className="text-xs text-purple-400 font-semibold">निवडा ➔</span>
                         </div>
                       ))}
                     </div>
@@ -253,60 +362,12 @@
             </div>
           )}
 
-          {/* TAB 3: SAVED (सेव्ह केलेली कॅप्शन्स) */}
-          {activeTab === 'saved' && (
-            <div className="px-5 pt-4 flex-1">
-              <h2 className="text-lg font-bold text-neutral-100 mb-1 flex items-center gap-2">
-                <span>🔖</span> Saved Captions
-              </h2>
-              <p className="text-xs text-neutral-400 mb-4">तुम्ही सेव्ह करून ठेवलेली सर्व कॅप्शन्स येथे दिसतील.</p>
-
-              {savedCaptions.length === 0 ? (
-                <div className="text-center py-16 text-neutral-500">
-                  <p className="text-3xl mb-2">📂</p>
-                  <p className="text-xs">अजून कोणतेही कॅप्शन सेव्ह केलेले नाही.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {savedCaptions.map((item) => (
-                    <div key={item.id} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-purple-400">{item.topic}</span>
-                        <span className="text-[10px] text-neutral-500">{item.date}</span>
-                      </div>
-                      <p className="text-xs text-neutral-300 mb-3 whitespace-pre-line">{item.caption}</p>
-                      {item.imageUrl && (
-                        <img src={item.imageUrl} alt="saved visual" className="w-full h-36 object-cover rounded-lg mb-3" />
-                      )}
-                      <button 
-                        onClick={() => { navigator.clipboard.writeText(item.caption); alert('कॉपी झाले!'); }}
-                        className="w-full bg-[#27272c] hover:bg-[#323238] text-xs py-2 rounded-lg text-neutral-200 transition"
-                      >
-                        कॅप्शन कॉपी करा
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Floating Action Button (Chat) */}
-          <div className="fixed bottom-24 right-5 z-30">
-            <button 
-              onClick={() => alert('मदत हवी आहे का? कृपया विषय Ideas टॅबमधून निवडा.')}
-              className="w-12 h-12 rounded-full bg-white text-neutral-900 shadow-xl flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition"
-            >
-              💬
-            </button>
-          </div>
-
-          {/* BOTTOM NAVIGATION BAR (तंतोतंत स्क्रीनशॉटसारखा कार्यक्षम बार) */}
+          {/* BOTTOM NAVIGATION BAR */}
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-[#1c1c20]/95 backdrop-blur-md border border-neutral-800 rounded-full px-3 py-2 flex items-center justify-around shadow-2xl z-30">
-            {/* Create */}
+            {/* 1. Create Button */}
             <button 
               onClick={() => setActiveTab('create')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition cursor-pointer ${
                 activeTab === 'create' 
                   ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
                   : 'text-neutral-400 hover:text-neutral-200'
@@ -316,10 +377,10 @@
               <span>Create</span>
             </button>
 
-            {/* Saved */}
+            {/* 2. Saved Button */}
             <button 
               onClick={() => setActiveTab('saved')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition cursor-pointer relative ${
                 activeTab === 'saved' 
                   ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
                   : 'text-neutral-400 hover:text-neutral-200'
@@ -327,12 +388,15 @@
             >
               <span className="text-sm">🔖</span>
               <span>Saved</span>
+              {savedCaptions.length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-purple-500 absolute top-1 right-2"></span>
+              )}
             </button>
 
-            {/* Ideas */}
+            {/* 3. Ideas Button */}
             <button 
               onClick={() => setActiveTab('ideas')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition cursor-pointer ${
                 activeTab === 'ideas' 
                   ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
                   : 'text-neutral-400 hover:text-neutral-200'
