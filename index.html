@@ -2,141 +2,346 @@
 <html lang="mr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Caption Generator App</title>
-  <!-- Tailwind CSS & React CDN (कोणत्याही इन्स्टॉलेशनची गरज नाही) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Caption Studio</title>
+  <!-- Tailwind CSS & React CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
-  <div id="root" class="w-full max-w-md"></div>
+<body class="bg-[#121214] text-slate-100 min-h-screen flex flex-col font-sans select-none antialiased">
+  <div id="root" class="flex-1 flex flex-col max-w-md mx-auto w-full pb-28"></div>
 
   <script type="text/babel">
     function App() {
-      const [language, setLanguage] = React.useState('mr');
+      const [activeTab, setActiveTab] = React.useState('create'); // 'create', 'saved', 'ideas'
+      const [language, setLanguage] = React.useState('en');
       const [topic, setTopic] = React.useState('');
       const [caption, setCaption] = React.useState('');
       const [imageUrl, setImageUrl] = React.useState('');
       const [loading, setLoading] = React.useState(false);
+      const [savedCaptions, setSavedCaptions] = React.useState([]);
 
-      const presets = [
-        { label: 'दिवाळी सण', topic: { mr: 'दिवाळी उत्सव आणि दिव्यांची रोषणाई', hi: 'दिवाली का पावन त्योहार', en: 'Diwali celebration of lights' }, img: 'https://images.unsplash.com/photo-1605371924599-2d0365da1ae0?auto=format&fit=crop&w=800&q=80' },
-        { label: 'चहा आणि पाऊस', topic: { mr: 'पावसाळा आणि गरमागरम आलं चहा', hi: 'रिमझिम बारिश और अदरक वाली चाय', en: 'Monsoon rain with hot cutting chai' }, img: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80' },
-        { label: 'सह्याद्री ट्रेक', topic: { mr: 'सह्याद्रीची हिरवीगार निसर्ग भ्रमंती', hi: 'पहाड़ों की खूबसूरत वादियों में ट्रेक', en: 'Sahyadri mountain trek with morning fog' }, img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' }
+      // टॉपिक निवडण्यासाठी 'Ideas' चे वर्गीकरण
+      const topicCategories = [
+        {
+          category: "🐾 मजेदार आणि पाळीव प्राणी (Pets & Fun)",
+          items: [
+            { title: "Funny cute cat", desc: "मजेदार खोडकर मांजर" },
+            { title: "Puppy playing in garden", desc: "बागेत खेळणारे गोड कुत्र्याचे पिल्लू" },
+            { title: "Weekend mood funny", desc: "रविवारचा निवांत आणि फनी मूड" }
+          ]
+        },
+        {
+          category: "☕ खाद्यसंस्कृती आणि चहा (Food & Chai)",
+          items: [
+            { title: "Monsoon cutting chai and pakoda", desc: "पावसाळा, गरमागरम भजी आणि कटिंग चहा" },
+            { title: "Traditional Indian thali feast", desc: "भरगच्च स्वादिष्ट भारतीय जेवणाचे ताट" },
+            { title: "Cozy coffee book cafe", desc: "कॅफे, कॉफी आणि आवडते पुस्तक" }
+          ]
+        },
+        {
+          category: "⛰️ निसर्ग आणि प्रवास (Nature & Travel)",
+          items: [
+            { title: "Sahyadri mountain misty trek", desc: "सह्याद्रीच्या डोंगररांगा आणि धुक्याची चादर" },
+            { title: "Golden sunset at the beach", desc: "समुद्रकिनाऱ्यावरील विलोभनीय सूर्यास्त" },
+            { title: "Night sky full of stars", desc: "ताऱ्यांनी भरलेले शांत रात्रीचे आकाश" }
+          ]
+        },
+        {
+          category: "✨ सण आणि संस्कृती (Festivals & Vibes)",
+          items: [
+            { title: "Diwali lights and colorful rangoli", desc: "दिवाळीच्या दिव्यांची रोषणाई आणि रांगोळी" },
+            { title: "Ganesh utsav dhol tasha", desc: "गणेशोत्सवाचा गजर आणि ढोल ताशा" },
+            { title: "Morning fitness gym workout", desc: "सकाळचा व्यायाम आणि नवी ऊर्जा" }
+          ]
+        }
       ];
 
-      const handleGenerate = () => {
-        if (!topic.trim()) return;
-        setLoading(true);
-        setTimeout(() => {
-          let text = '';
-          let img = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
-          if (language === 'mr') {
-            text = `"${topic}" या विषयावर खास कॅप्शन:\n\nनिसर्गाच्या सानिध्यात रममाण होण्याचा आणि मनाला नवी ऊर्जा देणारा सुंदर क्षण! ✨🌿\n\n#मराठी #${topic.replace(/\s+/g, '')} #महाराष्ट्र #जीवन`;
-          } else if (language === 'hi') {
-            text = `"${topic}" के लिए खूबसूरत कैप्शन:\n\nप्रकृति की गोद में सुकून और खुशियों का अनमोल अहसास! 🌸✨\n\n#हिंदी #${topic.replace(/\s+/g, '')} #जिंदगी`;
-          } else {
-            text = `Captivating visual story for "${topic}":\n\nEmbracing serene moments and finding magic in everyday life! 💫🍃\n\n#Inspiration #${topic.replace(/\s+/g, '')} #LifeMoments`;
-          }
-          setCaption(text);
-          setImageUrl(img);
-          setLoading(false);
-        }, 700);
+      // आयडिया निवडून थेट मुख्य इनपुटमध्ये टाकणे
+      const selectIdeaTopic = (selectedTitle) => {
+        setTopic(selectedTitle);
+        setActiveTab('create');
       };
 
-      const copyCaption = () => {
-        navigator.clipboard.writeText(caption);
-        alert('कॅप्शन कॉपी झाले आहे!');
+      // कॅप्शन आणि इमेज जनरेट करणे
+      const handleGenerate = () => {
+        if (!topic.trim()) {
+          alert('कृपया आधी विषय टाका किंवा Ideas मधून निवडा!');
+          return;
+        }
+
+        setLoading(true);
+        const cleanTopic = topic.trim();
+        const generatedImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanTopic + ' high quality masterpiece photography')}?width=800&height=550&nologo=true&seed=${Date.now()}`;
+
+        setTimeout(() => {
+          let text = '';
+          const tag = cleanTopic.replace(/[^a-zA-Z0-9]/g, '');
+
+          if (language === 'mr') {
+            text = `"${cleanTopic}"\n\nनिसर्गाच्या सुंदर रंगात आणि आयुष्याच्या या गोड क्षणात मनसोक्त जगा! प्रत्येक दिवसाची सुरुवात एका नव्या उमेदीने करा. ✨🌿\n\n#मराठी #${tag || 'Trending'} #DailyVibes #जीवन`;
+          } else if (language === 'hi') {
+            text = `"${cleanTopic}"\n\nजिंदगी की असली खूबसूरती ऐसी ही छोटी-छोटी खुशियों में बसी होती है। मुस्कुराइए और हर पल को दिल से जिएं! 🌸💫\n\n#हिंदी #${tag || 'Trending'} #GoodVibes #Viral`;
+          } else {
+            text = `Captivating visual story for "${cleanTopic}"!\n\nEmbracing serene moments and finding magic in everyday life. Keep smiling, stay inspired, and let the good vibes flow! 🌟✨\n\n#${tag || 'Trending'} #InstaDaily #Explore #Visuals`;
+          }
+
+          setCaption(text);
+          setImageUrl(generatedImage);
+          setLoading(false);
+        }, 1100);
+      };
+
+      // कॅप्शन सेव्ह करणे
+      const saveCaption = () => {
+        if (!caption) return;
+        setSavedCaptions([
+          { topic, caption, imageUrl, id: Date.now(), date: new Date().toLocaleDateString() },
+          ...savedCaptions
+        ]);
+        alert('कॅप्शन "Saved" टॅबमध्ये सुरक्षित केले आहे!');
       };
 
       return (
-        <div className="bg-slate-800 rounded-3xl p-6 shadow-2xl border border-slate-700">
-          <h1 className="text-2xl font-bold text-center mb-1 text-indigo-400">✨ व्हिज्युअल कॅप्शन स्टुडिओ</h1>
-          <p className="text-xs text-center text-slate-400 mb-6">सोशल मीडियासाठी आकर्षक कॅप्शन आणि इमेज</p>
-
-          {/* भाषा निवडा */}
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">भाषा निवडा (Language)</label>
-            <select 
-              value={language} 
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="mr">मराठी (Marathi)</option>
-              <option value="hi">हिंदी (Hindi)</option>
-              <option value="en">English (इंग्रजी)</option>
-            </select>
-          </div>
-
-          {/* त्वरित विषय (Presets) */}
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">तयार विषय निवडा</label>
-            <div className="flex flex-wrap gap-2">
-              {presets.map((p, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setTopic(p.topic[language] || p.topic.en);
-                    setImageUrl(p.img);
-                  }}
-                  className="text-xs bg-slate-700 hover:bg-indigo-600/30 text-indigo-200 border border-indigo-500/20 px-3 py-1.5 rounded-full transition"
-                >
-                  {p.label}
-                </button>
-              ))}
+        <div className="flex flex-col min-h-screen">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/80 sticky top-0 bg-[#121214]/90 backdrop-blur z-20">
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-400 cursor-pointer">‹</span>
+              <div className="w-6 h-6 rounded-md bg-purple-600 flex items-center justify-center text-xs">🎴</div>
+              <h1 className="font-semibold text-base tracking-wide flex items-center gap-1">
+                Caption Studio <span className="text-xs text-neutral-400">▾</span>
+              </h1>
             </div>
+            <button 
+              onClick={() => alert('पब्लिश फीचर लवकरच उपलब्ध होईल!')}
+              className="bg-cyan-200 text-neutral-900 font-semibold px-4 py-1.5 rounded-full text-xs hover:bg-cyan-100 transition"
+            >
+              Publish
+            </button>
           </div>
 
-          {/* विषय इनपुट */}
-          <div className="mb-5">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">विषय (Topic)</label>
-            <input 
-              type="text" 
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="उदा. सह्याद्री ट्रेक, कॉफी, पाऊस..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+          {/* MAIN TAB: CREATE */}
+          {activeTab === 'create' && (
+            <div className="px-5 pt-4 flex-1">
+              <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
+                {/* Language */}
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-neutral-300 mb-1.5">Language</label>
+                  <select 
+                    value={language} 
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="w-full bg-[#27272c] border border-neutral-700/80 rounded-xl p-3 text-sm text-neutral-100 focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="en">English</option>
+                    <option value="mr">Marathi (मराठी)</option>
+                    <option value="hi">Hindi (हिंदी)</option>
+                  </select>
+                  <p className="text-[11px] text-neutral-400 mt-1">Choose Marathi, Hindi, or English.</p>
+                </div>
 
-          {/* जनरेट बटण */}
-          <button 
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3.5 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 disabled:opacity-50 mb-6"
-          >
-            {loading ? 'कॅप्शन तयार होत आहे...' : '🚀 कॅप्शन आणि इमेज बनवा'}
-          </button>
+                {/* Topic */}
+                <div className="mb-5">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-medium text-neutral-300">Topic</label>
+                    <button 
+                      onClick={() => setActiveTab('ideas')} 
+                      className="text-[11px] text-purple-400 hover:underline flex items-center gap-1"
+                    >
+                      💡 Need ideas?
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="What is your post about?"
+                    className="w-full bg-[#27272c] border border-neutral-700/80 rounded-xl p-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-[11px] text-neutral-400 mt-1">A phrase or a few details is enough.</p>
+                </div>
 
-          {/* तयार झालेले कॅप्शन */}
-          {caption && (
-            <div className="mb-6 bg-slate-900/80 rounded-2xl p-4 border border-slate-700">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-indigo-400 uppercase">तयार झालेले कॅप्शन</span>
+                {/* Generate Button */}
                 <button 
-                  onClick={copyCaption}
-                  className="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-3 py-1 rounded-lg transition"
+                  onClick={handleGenerate}
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-500 active:scale-[0.99] text-white font-medium py-3 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-50 text-sm"
                 >
-                  📋 कॉपी करा
+                  <span>✨</span> {loading ? 'Generating...' : 'Generate Caption'}
                 </button>
               </div>
-              <textarea 
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                rows={4}
-                className="w-full bg-transparent text-sm text-slate-200 resize-none focus:outline-none"
-              />
+
+              {/* Caption & Image Output Preview */}
+              {caption ? (
+                <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Your Caption</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => { navigator.clipboard.writeText(caption); alert('कॉपी झाले!'); }}
+                        className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1 rounded-md transition"
+                      >
+                        📋 Copy
+                      </button>
+                      <button 
+                        onClick={saveCaption}
+                        className="text-xs bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 px-2.5 py-1 rounded-md transition"
+                      >
+                        🔖 Save
+                      </button>
+                    </div>
+                  </div>
+                  <textarea 
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    rows={4}
+                    className="w-full bg-[#161619] p-3 rounded-xl border border-neutral-800 text-sm text-neutral-200 resize-none focus:outline-none mb-4"
+                  />
+
+                  {imageUrl && (
+                    <div className="rounded-xl overflow-hidden border border-neutral-800">
+                      <img src={imageUrl} alt="Generated visual" className="w-full h-52 object-cover" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 text-neutral-400">
+                  <div className="w-12 h-12 rounded-full bg-neutral-800/60 flex items-center justify-center text-xl mb-3">🪄</div>
+                  <h3 className="font-semibold text-sm text-neutral-200 mb-1">Your caption appears here</h3>
+                  <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+                    Choose a language, add a topic, and generate a caption with a matching image.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* इमेज डिस्प्ले */}
-          {imageUrl && (
-            <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-md">
-              <img src={imageUrl} alt="Generated Visual" className="w-full h-52 object-cover" />
+          {/* TAB 2: IDEAS (टॉपिक निवडण्यासाठी स्क्रीन) */}
+          {activeTab === 'ideas' && (
+            <div className="px-5 pt-4 flex-1">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
+                  <span>💡</span> Need a topic idea?
+                </h2>
+                <p className="text-xs text-neutral-400">खालीलपैकी कोणत्याही विषयावर क्लिक करा, तो आपोआप निवडला जाईल.</p>
+              </div>
+
+              <div className="space-y-5">
+                {topicCategories.map((cat, idx) => (
+                  <div key={idx} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800">
+                    <h3 className="text-xs font-semibold text-purple-400 mb-3 tracking-wide">{cat.category}</h3>
+                    <div className="space-y-2">
+                      {cat.items.map((item, i) => (
+                        <div 
+                          key={i} 
+                          onClick={() => selectIdeaTopic(item.title)}
+                          className="p-3 bg-[#242429] hover:bg-purple-950/40 hover:border-purple-500/50 border border-transparent rounded-xl cursor-pointer transition flex justify-between items-center group"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-neutral-200 group-hover:text-purple-300">{item.title}</p>
+                            <p className="text-xs text-neutral-400">{item.desc}</p>
+                          </div>
+                          <span className="text-xs text-purple-400">वापरा ➔</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* TAB 3: SAVED (सेव्ह केलेली कॅप्शन्स) */}
+          {activeTab === 'saved' && (
+            <div className="px-5 pt-4 flex-1">
+              <h2 className="text-lg font-bold text-neutral-100 mb-1 flex items-center gap-2">
+                <span>🔖</span> Saved Captions
+              </h2>
+              <p className="text-xs text-neutral-400 mb-4">तुम्ही सेव्ह करून ठेवलेली सर्व कॅप्शन्स येथे दिसतील.</p>
+
+              {savedCaptions.length === 0 ? (
+                <div className="text-center py-16 text-neutral-500">
+                  <p className="text-3xl mb-2">📂</p>
+                  <p className="text-xs">अजून कोणतेही कॅप्शन सेव्ह केलेले नाही.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {savedCaptions.map((item) => (
+                    <div key={item.id} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-semibold text-purple-400">{item.topic}</span>
+                        <span className="text-[10px] text-neutral-500">{item.date}</span>
+                      </div>
+                      <p className="text-xs text-neutral-300 mb-3 whitespace-pre-line">{item.caption}</p>
+                      {item.imageUrl && (
+                        <img src={item.imageUrl} alt="saved visual" className="w-full h-36 object-cover rounded-lg mb-3" />
+                      )}
+                      <button 
+                        onClick={() => { navigator.clipboard.writeText(item.caption); alert('कॉपी झाले!'); }}
+                        className="w-full bg-[#27272c] hover:bg-[#323238] text-xs py-2 rounded-lg text-neutral-200 transition"
+                      >
+                        कॅप्शन कॉपी करा
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Floating Action Button (Chat) */}
+          <div className="fixed bottom-24 right-5 z-30">
+            <button 
+              onClick={() => alert('मदत हवी आहे का? कृपया विषय Ideas टॅबमधून निवडा.')}
+              className="w-12 h-12 rounded-full bg-white text-neutral-900 shadow-xl flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition"
+            >
+              💬
+            </button>
+          </div>
+
+          {/* BOTTOM NAVIGATION BAR (तंतोतंत स्क्रीनशॉटसारखा कार्यक्षम बार) */}
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-[#1c1c20]/95 backdrop-blur-md border border-neutral-800 rounded-full px-3 py-2 flex items-center justify-around shadow-2xl z-30">
+            {/* Create */}
+            <button 
+              onClick={() => setActiveTab('create')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+                activeTab === 'create' 
+                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <span className="text-base font-bold">⊕</span>
+              <span>Create</span>
+            </button>
+
+            {/* Saved */}
+            <button 
+              onClick={() => setActiveTab('saved')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+                activeTab === 'saved' 
+                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <span className="text-sm">🔖</span>
+              <span>Saved</span>
+            </button>
+
+            {/* Ideas */}
+            <button 
+              onClick={() => setActiveTab('ideas')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
+                activeTab === 'ideas' 
+                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' 
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <span className="text-sm">💡</span>
+              <span>Ideas</span>
+            </button>
+          </div>
         </div>
       );
     }
