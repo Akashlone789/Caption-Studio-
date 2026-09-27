@@ -425,17 +425,8 @@
               <span className="text-sm">🔖</span>
               <span>Saved</span>
             </button>
-            <button 
-            onClick={() => setActiveTab('saved')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
-                activeTab === 'saved' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' : 'text-neutral-400'
-              }`}
-            >
-              <span className="text-sm">🔖</span>
-              <span>Saved</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('ideas')}
+            <button
+          onClick={() => setActiveTab('ideas')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
                 activeTab === 'ideas' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' : 'text-neutral-400'
               }`}
