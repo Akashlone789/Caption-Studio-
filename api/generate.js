@@ -25,16 +25,15 @@ export default async function handler(req, res) {
 
   const targetLang = langMap[language] || 'English';
 
-  // सर्व प्लॅटफॉर्मसाठी स्वतंत्र आणि प्रोफेशनल कॅप्शन्स मागणे
   const systemPrompt = `You are an expert social media manager and copywriter.
 Topic: "${topic}".
 Language: Write completely in ${targetLang}.
 
-Generate professional and engaging captions tailored for these 4 platforms:
+Generate professional, high-engaging captions tailored for these 4 platforms:
 1. Instagram: Engaging, trendy, visual-focused, with emojis and popular hashtags.
-2. LinkedIn: Professional, insightful, thought-leadership style, value-driven with career/business hashtags.
-3. Facebook: Conversational, community-focused, storytelling style with engaging emojis.
-4. Twitter (X): Crisp, punchy, under 280 characters, highly engaging with a hook.
+2. LinkedIn: Professional, insightful, career/business value with relevant hashtags.
+3. Facebook: Conversational, community-oriented storytelling with emojis.
+4. Twitter (X): Crisp, punchy, under 280 characters with a strong hook.
 
 Also create a 3-5 word concise English photography prompt representing this topic visually.
 
@@ -47,20 +46,40 @@ Return response ONLY in this valid JSON format:
   "imagePrompt": "concise english visual prompt"
 }`;
 
+  // १. गुगलकडून थेट उपलब्ध मॉडेल्सची यादी मिळवणे (Auto-Discovery)
+  let activeModel = 'models/gemini-2.5-flash'; // सुरक्षित डिफॉल्ट
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
-        })
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const validModels = (listData.models || [])
+        .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => m.name); // e.g., "models/gemini-2.5-flash"
+
+      if (validModels.length > 0) {
+        // प्रथम Flash मॉडेल शोधणे, नसल्यास उपलब्ध असलेले पहिले मॉडेल निवडणे
+        const flashModel = validModels.find(m => m.includes('flash'));
+        activeModel = flashModel || validModels[0];
       }
-    );
+    }
+  } catch (err) {
+    console.log("Model list lookup failed, using fallback:", err);
+  }
+
+  // २. निवडलेल्या मॉडेलद्वारे कॅप्शन जनरेट करणे
+  try {
+    const generateUrl = `https://generativelanguage.googleapis.com/v1beta/${activeModel}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(generateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      })
+    });
 
     const data = await response.json();
 
@@ -84,9 +103,9 @@ Return response ONLY in this valid JSON format:
       };
     }
 
-    // हाय-क्वालिटी AI फोटो जनरेट करणे
+    // ३. हाय-क्वालिटी AI फोटो जनरेट करणे
     const seed = Math.floor(Math.random() * 900000) + 100000;
-    const cleanPrompt = encodeURIComponent((parsed.imagePrompt || topic) + ' high quality professional photography 4k');
+    const cleanPrompt = encodeURIComponent((parsed.imagePrompt || topic) + ' high quality 4k professional photography');
     const imageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=800&height=550&nologo=true&seed=${seed}`;
 
     return res.status(200).json({ 
@@ -102,4 +121,4 @@ Return response ONLY in this valid JSON format:
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Server error' });
   }
-                                           }
+        }
