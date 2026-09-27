@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Topic is required' });
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ 
@@ -46,25 +46,8 @@ Return response ONLY in this valid JSON format:
   "imagePrompt": "concise english visual prompt"
 }`;
 
-  // १. गुगलकडून थेट उपलब्ध मॉडेल्सची यादी मिळवणे (Auto-Discovery)
-  let activeModel = 'models/gemini-2.5-flash'; // सुरक्षित डिफॉल्ट
-  try {
-    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      const validModels = (listData.models || [])
-        .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-        .map(m => m.name); // e.g., "models/gemini-2.5-flash"
-
-      if (validModels.length > 0) {
-        // प्रथम Flash मॉडेल शोधणे, नसल्यास उपलब्ध असलेले पहिले मॉडेल निवडणे
-        const flashModel = validModels.find(m => m.includes('flash'));
-        activeModel = flashModel || validModels[0];
-      }
-    }
-  } catch (err) {
-    console.log("Model list lookup failed, using fallback:", err);
-  }
+  // १. नवीन व सपोर्टेड मॉडेल निश्चित करणे
+  const activeModel = 'models/gemini-3.8-flash';
 
   // २. निवडलेल्या मॉडेलद्वारे कॅप्शन जनरेट करणे
   try {
@@ -121,4 +104,4 @@ Return response ONLY in this valid JSON format:
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Server error' });
   }
-        }
+}
