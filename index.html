@@ -77,13 +77,6 @@
             { title: "New job or career milestone achievement", desc: "नवीन नोकरी किंवा करिअरचे यश" },
             { title: "Teamwork and leadership success", desc: "टीमवर्क आणि नेतृत्व गुण" }
           ]
-        },
-        {
-          category: "⛰️ निसर्ग आणि प्रवास (Instagram)",
-          items: [
-            { title: "Misty Sahyadri mountain trekking", desc: "सह्याद्रीच्या डोंगररांगा आणि ट्रेकिंग" },
-            { title: "Tiger and wildlife reserve safari", desc: "वाघ आणि वन्यजीव सफारी" }
-          ]
         }
       ];
 
@@ -105,35 +98,52 @@
         setImageUrl('');
         setCaptions(null);
         
-        // Auto-select output tab based on choice
+        // Auto-select platform tab
         if (targetPlatform !== 'all' && targetPlatform !== 'youtube_title') {
             setSelectedOutputPlatform(targetPlatform);
         } else if (targetPlatform === 'youtube_title') {
             setSelectedOutputPlatform('youtube');
         } else {
-            setSelectedOutputPlatform('instagram');
+            setSelectedOutputPlatform('youtube');
         }
 
         const cleanTopic = topic.trim();
 
         try {
-          setTimeout(() => {
-            const ytTitle = `🔥 ${cleanTopic} | Must Watch!`;
-            const ytDesc = `🎬 व्हिडिओ नक्की पहा: ${cleanTopic}\n\nनमस्कार मित्रांनो! ${channelName ? channelName + ' वर' : 'माझ्या चॅनेलवर'} तुमचे स्वागत आहे. या व्हिडिओमध्ये आपण पाहणार आहोत एक खास विषय. व्हिडिओ आवडल्यास लाईक आणि सबस्क्राईब नक्की करा! \n\n${useHashtags ? '#Trending #YouTube #Video' : ''}`;
-            
-            setCaptions({
-              youtube: targetPlatform === 'youtube_title' ? ytTitle : ytDesc,
-              instagram: `${cleanTopic} ✨\n\nनवीन पोस्ट नक्की चेक करा! ${useEmojis ? '🔥🙌' : ''}\n${useHashtags ? '#InstaGood #Trending' : ''}`,
-              linkedin: `Excited to share my thoughts on ${cleanTopic}. Continuous learning is the key to growth. ${useEmojis ? '💼🚀' : ''}\n\n${useHashtags ? '#Professional #Growth #Leadership' : ''}`,
-              facebook: `सर्वांना नमस्कार! आजचा विषय: ${cleanTopic}. तुमचा दिवस शुभ जावो! ${useEmojis ? '😊' : ''}`,
-              twitter: `Just shared something new about ${cleanTopic}. Check it out! ${useEmojis ? '🚀' : ''} ${useHashtags ? '#Update #Trending' : ''}`
-            });
-            setImageUrl('https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600&auto=format&fit=crop');
-            setLoading(false);
-            showToast('✨ कॅप्शन तयार झाले आहे!');
-          }, 1500);
+          // खरा API कॉल - हे डेटा तुमच्या बॅकएंडला जाईल
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              topic: cleanTopic, 
+              language: language,
+              platform: targetPlatform,
+              tone: tone,
+              length: length,
+              useHashtags: useHashtags,
+              useEmojis: useEmojis,
+              channelName: channelName,
+              videoFormat: videoFormat
+            })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || 'कॅप्शन जनरेट करताना अडचण आली');
+          }
+
+          setCaptions(data.captions);
+          
+          if (data.imageUrl) {
+            setImageUrl(data.imageUrl);
+          }
+          
+          showToast('✨ कॅप्शन तयार झाले आहे!');
         } catch (err) {
-          showToast('एरर आला आहे.');
+          console.error(err);
+          showToast('एरर: ' + (err.message || 'API कनेक्ट होत नाहीये'));
+        } finally {
           setLoading(false);
         }
       };
@@ -237,7 +247,7 @@
                   </select>
                 </div>
 
-                {/* 2. Platform / Purpose Selection (नवीन जोडलेला ड्रॉपडाऊन) */}
+                {/* 2. Platform / Purpose Selection */}
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-purple-400 mb-1.5">Platform (कशासाठी पाहिजे?)</label>
                   <select 
@@ -247,7 +257,7 @@
                   >
                     <option value="all">🌐 सर्व प्लॅटफॉर्म्स (All in One)</option>
                     <option value="youtube">▶️ YouTube Caption & Description</option>
-                    <option value="youtube_title">▶️ YouTube Title (फक्त शीर्षक)</option>
+                    <option value="youtube_title">▶️️ YouTube Title (फक्त शीर्षक)</option>
                     <option value="instagram">📸 Instagram Post / Reel</option>
                     <option value="linkedin">💼 LinkedIn Professional Post</option>
                     <option value="facebook">📘 Facebook Post</option>
@@ -304,6 +314,38 @@
                   />
                 </div>
 
+                {/* 5. YouTube Settings */}
+                {(targetPlatform === 'youtube' || targetPlatform === 'youtube_title' || targetPlatform === 'all') && (
+                  <div className="mb-4 bg-red-900/10 border border-red-500/20 p-3.5 rounded-xl transition-all">
+                    <h4 className="text-xs font-bold text-red-400 mb-2 flex items-center gap-1">
+                      <span className="text-sm">▶</span> YouTube Settings
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-neutral-400 mb-1">Channel Name</label>
+                        <input 
+                          type="text" 
+                          value={channelName}
+                          onChange={(e)=>setChannelName(e.target.value)}
+                          placeholder="उदा. Akashvurse" 
+                          className="w-full bg-[#121214] border border-neutral-700/80 focus:border-red-500/50 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-neutral-400 mb-1">Video Format</label>
+                        <select 
+                          value={videoFormat}
+                          onChange={(e)=>setVideoFormat(e.target.value)}
+                          className="w-full bg-[#121214] border border-neutral-700/80 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-red-500/50"
+                        >
+                          <option value="16:9">Long Video (16:9)</option>
+                          <option value="9:16">Shorts (9:16)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Extras: Hashtags & Emojis */}
                 <div className="flex gap-5 mb-5 border-t border-neutral-800/80 pt-4">
                   <label className="flex items-center gap-2 text-xs font-medium text-neutral-300 cursor-pointer">
@@ -347,44 +389,13 @@
                     </div>
                   )}
 
-                  {selectedOutputPlatform === 'youtube' && (
-                    <div className="bg-red-900/10 border border-red-500/20 p-3.5 rounded-xl mb-4 transition-all">
-                      <h4 className="text-xs font-bold text-red-400 mb-2 flex items-center gap-1">
-                        <span className="text-sm">▶</span> YouTube Settings
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] text-neutral-400 mb-1">Channel Name</label>
-                          <input 
-                            type="text" 
-                            value={channelName}
-                            onChange={(e)=>setChannelName(e.target.value)}
-                            placeholder="उदा. AL OFFICIAL" 
-                            className="w-full bg-[#121214] border border-neutral-700/80 focus:border-red-500/50 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none" 
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-neutral-400 mb-1">Video Format</label>
-                          <select 
-                            value={videoFormat}
-                            onChange={(e)=>setVideoFormat(e.target.value)}
-                            className="w-full bg-[#121214] border border-neutral-700/80 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-red-500/50"
-                          >
-                            <option value="16:9">Long Video (16:9)</option>
-                            <option value="9:16">Shorts (9:16)</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex justify-between items-center mb-3">
                     <span className={`text-xs font-semibold uppercase tracking-wider ${selectedOutputPlatform === 'youtube' ? 'text-red-400' : 'text-purple-400'}`}>
                       {targetPlatform === 'youtube_title' ? 'YOUTUBE TITLE' : `${selectedOutputPlatform.toUpperCase()} CAPTION`}
                     </span>
                     <div className="flex gap-1.5">
                       <button 
-                        onClick={() => handleCopy(captions[selectedOutputPlatform])}
+                        onClick={() => handleCopy(captions[selectedOutputPlatform] || captions.caption || captions.title)}
                         className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1.5 rounded-lg transition"
                       >
                         📋 Copy
@@ -402,14 +413,34 @@
                   </div>
 
                   <textarea 
-                    value={captions[selectedOutputPlatform]}
+                    value={captions[selectedOutputPlatform] || captions.caption || captions.title || typeof captions === 'string' ? captions : ''}
                     onChange={(e) => {
-                      const updated = { ...captions, [selectedOutputPlatform]: e.target.value };
-                      setCaptions(updated);
+                      if (typeof captions === 'object') {
+                         setCaptions({ ...captions, [selectedOutputPlatform]: e.target.value });
+                      }
                     }}
                     rows={targetPlatform === 'youtube_title' ? 2 : 6}
                     className={`w-full bg-[#161619] p-3 rounded-xl border text-sm text-neutral-200 resize-none focus:outline-none mb-4 leading-relaxed ${selectedOutputPlatform === 'youtube' ? 'border-red-900/40 focus:border-red-500/50' : 'border-neutral-800 focus:border-purple-500/50'}`}
                   />
+                  
+                  {/* HIGH QUALITY AI IMAGE */}
+                  {imageUrl && (
+                    <div className="rounded-xl overflow-hidden border border-neutral-800 bg-[#161619] relative min-h-[220px] flex items-center justify-center mt-4">
+                      {imageLoading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 z-10">
+                          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                          <p className="text-xs text-neutral-400">क्वालिटी फोटो लोड होत आहे...</p>
+                        </div>
+                      )}
+                      <img 
+                        src={imageUrl} 
+                        alt="AI Visual" 
+                        onLoad={() => setImageLoading(false)}
+                        onError={() => setImageLoading(false)}
+                        className={`w-full h-56 object-cover transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`} 
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -420,7 +451,6 @@
               <h2 className="text-lg font-bold text-neutral-100 mb-1 flex items-center gap-2">
                 <span>🔖</span> Saved Captions
               </h2>
-              <p className="text-xs text-neutral-400 mb-4">सेव्ह केलेली सर्व कॅप्शन्स</p>
               
               {savedCaptions.length === 0 ? (
                 <div className="text-center py-20 text-neutral-500">
@@ -428,7 +458,7 @@
                   <p className="text-sm font-medium text-neutral-300 mb-1">अजून कोणतेही कॅप्शन सेव्ह केलेले नाही</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 mt-4">
                   {savedCaptions.map((item) => (
                     <div key={item.id} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800 shadow-md">
                       <div className="flex justify-between items-center mb-2">
@@ -440,12 +470,6 @@
                       <p className="text-xs text-neutral-300 mb-3 whitespace-pre-line leading-relaxed">{item.caption}</p>
                       
                       <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleShare(item.caption, item.imageUrl)}
-                          className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 text-xs px-3 py-2 rounded-lg transition"
-                        >
-                          📤 शेअर
-                        </button>
                         <button 
                           onClick={() => handleCopy(item.caption)} 
                           className="flex-1 bg-[#27272c] text-xs py-2 rounded-lg text-neutral-200"
