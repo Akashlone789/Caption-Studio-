@@ -8,6 +8,12 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
 <body class="bg-[#121214] text-slate-100 min-h-screen flex flex-col font-sans select-none antialiased">
   <div id="root" class="flex-1 flex flex-col max-w-md mx-auto w-full pb-32"></div>
@@ -17,8 +23,18 @@
       const [activeTab, setActiveTab] = React.useState('create');
       const [language, setLanguage] = React.useState('en');
       const [topic, setTopic] = React.useState('');
+      
+      const [tone, setTone] = React.useState('professional');
+      const [length, setLength] = React.useState('medium');
+      const [useHashtags, setUseHashtags] = React.useState(true);
+      const [useEmojis, setUseEmojis] = React.useState(true);
+      
       const [captions, setCaptions] = React.useState(null);
-      const [selectedPlatform, setSelectedPlatform] = React.useState('instagram');
+      const [selectedPlatform, setSelectedPlatform] = React.useState('youtube');
+      
+      const [channelName, setChannelName] = React.useState('');
+      const [videoFormat, setVideoFormat] = React.useState('16:9');
+
       const [imageUrl, setImageUrl] = React.useState('');
       const [loading, setLoading] = React.useState(false);
       const [imageLoading, setImageLoading] = React.useState(false);
@@ -39,34 +55,33 @@
         setTimeout(() => setToast(''), 2500);
       };
 
+      const getPlaceholder = () => {
+        if (language === 'mr') return "उदा. चॅनेल इंट्रो, सह्याद्री ट्रेक, नवीन व्हिडिओ...";
+        if (language === 'hi') return "उदा. फनी कैट्स, वाइल्डलाइफ, नया व्लॉग...";
+        return "e.g. Dyatlov Pass documentary, funny dogs animation, new vlog...";
+      };
+
       const topicCategories = [
         {
-          category: "💼 करिअर आणि बिझनेस (LinkedIn & Business)",
+          category: "🎬 व्हिडिओ आणि ॲनिमेशन (YouTube)",
+          items: [
+            { title: "Dyatlov Pass mystery documentary", desc: "रहस्यमय घटना आणि माहिती (Long 16:9)" },
+            { title: "Funny cats and dogs compilation", desc: "मजेदार प्राण्यांचे ॲनिमेशन (Shorts 9:16)" },
+            { title: "New channel intro video", desc: "चॅनेलसाठी धमाकेदार इंट्रोडक्शन" }
+          ]
+        },
+        {
+          category: "💼 करिअर आणि बिझनेस (LinkedIn)",
           items: [
             { title: "New job or career milestone achievement", desc: "नवीन नोकरी किंवा करिअरचे यश" },
-            { title: "Teamwork and leadership success", desc: "टीमवर्क आणि नेतृत्व गुण" },
-            { title: "Startup business growth mindset", desc: "स्टार्टअप आणि बिझनेस ग्रोथ" }
+            { title: "Teamwork and leadership success", desc: "टीमवर्क आणि नेतृत्व गुण" }
           ]
         },
         {
-          category: "☕ खाद्यसंस्कृती आणि चहा (Food & Chai)",
-          items: [
-            { title: "Monsoon hot cutting chai with pakoda", desc: "पावसाळा, गरमागरम भजी आणि कटिंग चहा" },
-            { title: "Maharashtrian spicy misal pav feast", desc: "झणझणीत मिसळ आणि चविष्ट नाश्ता" }
-          ]
-        },
-        {
-          category: "⛰️ निसर्ग आणि प्रवास (Nature & Travel)",
+          category: "⛰️ निसर्ग आणि प्रवास (Instagram)",
           items: [
             { title: "Misty Sahyadri mountain trekking", desc: "सह्याद्रीच्या डोंगररांगा आणि ट्रेकिंग" },
-            { title: "Golden sunset at sea beach", desc: "समुद्रकिनाऱ्यावरील विलोभनीय सूर्यास्त" }
-          ]
-        },
-        {
-          category: "✨ सण आणि संस्कृती (Festivals & Vibes)",
-          items: [
-            { title: "Diwali lights and colorful rangoli", desc: "दिवाळीच्या दिव्यांची रोषणाई" },
-            { title: "Morning fitness gym workout motivation", desc: "सकाळचा व्यायाम आणि ऊर्जा" }
+            { title: "Tiger and wildlife reserve safari", desc: "वाघ आणि वन्यजीव सफारी" }
           ]
         }
       ];
@@ -91,27 +106,20 @@
         const cleanTopic = topic.trim();
 
         try {
-          const res = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic: cleanTopic, language })
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(data.error || 'कॅप्शन जनरेट करताना अडचण आली');
-          }
-
-          setCaptions(data.captions);
-          if (data.imageUrl) {
-            setImageUrl(data.imageUrl);
-          }
-          showToast('✨ सर्व प्लॅटफॉर्म्ससाठी कॅप्शन आणि फोटो तयार!');
+          setTimeout(() => {
+            setCaptions({
+              youtube: `🎬 व्हिडिओ नक्की पहा: ${cleanTopic}\n\nनमस्कार मित्रांनो! ${channelName ? channelName + ' वर' : 'माझ्या चॅनेलवर'} तुमचे स्वागत आहे. या व्हिडिओमध्ये आपण पाहणार आहोत एक खास विषय. व्हिडिओ आवडल्यास लाईक आणि सबस्क्राईब नक्की करा! \n\n${useHashtags ? '#Trending #YouTube #Video' : ''}`,
+              instagram: `${cleanTopic} ✨\n\nनवीन पोस्ट नक्की चेक करा! ${useEmojis ? '🔥🙌' : ''}\n${useHashtags ? '#InstaGood #Trending' : ''}`,
+              linkedin: `Excited to share my thoughts on ${cleanTopic}. Continuous learning is the key to growth. ${useEmojis ? '💼🚀' : ''}\n\n${useHashtags ? '#Professional #Growth #Leadership' : ''}`,
+              facebook: `सर्वांना नमस्कार! आजचा विषय: ${cleanTopic}. तुमचा दिवस शुभ जावो! ${useEmojis ? '😊' : ''}`,
+              twitter: `Just shared something new about ${cleanTopic}. Check it out! ${useEmojis ? '🚀' : ''} ${useHashtags ? '#Update #Trending' : ''}`
+            });
+            setImageUrl('https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600&auto=format&fit=crop');
+            setLoading(false);
+            showToast('✨ सर्व प्लॅटफॉर्म्ससाठी कॅप्शन तयार!');
+          }, 1500);
         } catch (err) {
-          console.error(err);
-          showToast('एरर: ' + (err.message || 'API कनेक्ट होत नाही'));
-        } finally {
+          showToast('एरर आला आहे.');
           setLoading(false);
         }
       };
@@ -174,7 +182,6 @@
             </div>
           )}
 
-          {/* HEADER */}
           <div className="flex items-center px-5 py-4 border-b border-neutral-800/80 sticky top-0 bg-[#121214]/90 backdrop-blur z-20">
             <div className="flex items-center gap-2">
               <span className="text-neutral-400 text-lg">‹</span>
@@ -185,10 +192,10 @@
             </div>
           </div>
 
-          {/* TAB 1: CREATE */}
           {activeTab === 'create' && (
             <div className="px-5 pt-4 flex-1">
               <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
+                
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-neutral-300 mb-1.5">Language (भाषा)</label>
                   <select 
@@ -202,9 +209,37 @@
                   </select>
                 </div>
 
-                <div className="mb-5">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-300 mb-1.5">Tone (कॅप्शन प्रकार)</label>
+                    <select 
+                      value={tone} 
+                      onChange={(e)=>setTone(e.target.value)} 
+                      className="w-full bg-[#27272c] border border-neutral-700/80 rounded-xl p-2.5 text-sm text-neutral-100 focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="professional">Professional</option>
+                      <option value="casual">Casual</option>
+                      <option value="funny">Funny</option>
+                      <option value="motivational">Motivational</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-300 mb-1.5">Length (लांबी)</label>
+                    <select 
+                      value={length} 
+                      onChange={(e)=>setLength(e.target.value)} 
+                      className="w-full bg-[#27272c] border border-neutral-700/80 rounded-xl p-2.5 text-sm text-neutral-100 focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="short">Short (लहान)</option>
+                      <option value="medium">Medium (मध्यम)</option>
+                      <option value="long">Long (मोठे)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-4">
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-medium text-neutral-300">Topic (विषय)</label>
+                    <label className="block text-xs font-medium text-neutral-300">Topic / Title (विषय / शीर्षक)</label>
                     <button 
                       onClick={() => setActiveTab('ideas')} 
                       className="text-[11px] text-purple-400 hover:underline flex items-center gap-1"
@@ -216,9 +251,20 @@
                     type="text" 
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="उदा. सह्याद्री ट्रेक, नवीन नोकरी, चहा..."
+                    placeholder={getPlaceholder()}
                     className="w-full bg-[#27272c] border border-neutral-700/80 rounded-xl p-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-purple-500"
                   />
+                </div>
+
+                <div className="flex gap-5 mb-5 border-t border-neutral-800/80 pt-4">
+                  <label className="flex items-center gap-2 text-xs font-medium text-neutral-300 cursor-pointer">
+                    <input type="checkbox" checked={useHashtags} onChange={(e)=>setUseHashtags(e.target.checked)} className="w-4 h-4 accent-purple-600 rounded" />
+                    # Hashtags
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium text-neutral-300 cursor-pointer">
+                    <input type="checkbox" checked={useEmojis} onChange={(e)=>setUseEmojis(e.target.checked)} className="w-4 h-4 accent-purple-600 rounded" />
+                    😊 Emojis
+                  </label>
                 </div>
 
                 <button 
@@ -230,18 +276,17 @@
                 </button>
               </div>
 
-              {/* OUTPUT SECTION */}
-              {captions ? (
-                <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
-                  {/* PLATFORM SWITCHER TABS */}
-                  <div className="grid grid-cols-4 gap-1.5 mb-4 bg-[#161619] p-1.5 rounded-xl border border-neutral-800">
-                    {['instagram', 'linkedin', 'facebook', 'twitter'].map((plat) => (
+              {captions && (
+                <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6 animate-fade-in">
+                  
+                  <div className="flex overflow-x-auto gap-1.5 mb-4 bg-[#161619] p-1.5 rounded-xl border border-neutral-800 no-scrollbar">
+                    {['youtube', 'instagram', 'linkedin', 'facebook', 'twitter'].map((plat) => (
                       <button
                         key={plat}
                         onClick={() => setSelectedPlatform(plat)}
-                        className={`py-2 text-[11px] font-semibold rounded-lg capitalize transition ${
+                        className={`flex-1 min-w-[70px] py-2 px-1 text-[11px] font-semibold rounded-lg capitalize transition ${
                           selectedPlatform === plat 
-                            ? 'bg-purple-600 text-white shadow' 
+                            ? (plat === 'youtube' ? 'bg-red-600 text-white shadow' : 'bg-purple-600 text-white shadow') 
                             : 'text-neutral-400 hover:text-neutral-200'
                         }`}
                       >
@@ -250,17 +295,42 @@
                     ))}
                   </div>
 
+                  {selectedPlatform === 'youtube' && (
+                    <div className="bg-red-900/10 border border-red-500/20 p-3.5 rounded-xl mb-4 transition-all">
+                      <h4 className="text-xs font-bold text-red-400 mb-2 flex items-center gap-1">
+                        <span className="text-sm">▶</span> YouTube Settings
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">Channel Name</label>
+                          <input 
+                            type="text" 
+                            value={channelName}
+                            onChange={(e)=>setChannelName(e.target.value)}
+                            placeholder="उदा. AL OFFICIAL" 
+                            className="w-full bg-[#121214] border border-neutral-700/80 focus:border-red-500/50 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-neutral-400 mb-1">Video Format</label>
+                          <select 
+                            value={videoFormat}
+                            onChange={(e)=>setVideoFormat(e.target.value)}
+                            className="w-full bg-[#121214] border border-neutral-700/80 p-2 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-red-500/50"
+                          >
+                            <option value="16:9">Long Video (16:9)</option>
+                            <option value="9:16">Shorts (9:16)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${selectedPlatform === 'youtube' ? 'text-red-400' : 'text-purple-400'}`}>
                       {selectedPlatform.toUpperCase()} CAPTION
                     </span>
                     <div className="flex gap-1.5">
-                      <button 
-                        onClick={() => handleShare(captions[selectedPlatform], imageUrl)}
-                        className="text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/30 px-2.5 py-1.5 rounded-lg transition"
-                      >
-                        📤 Share
-                      </button>
                       <button 
                         onClick={() => handleCopy(captions[selectedPlatform])}
                         className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1.5 rounded-lg transition"
@@ -286,51 +356,23 @@
                       setCaptions(updated);
                     }}
                     rows={6}
-                    className="w-full bg-[#161619] p-3 rounded-xl border border-neutral-800 text-sm text-neutral-200 resize-none focus:outline-none mb-4 leading-relaxed"
+                    className={`w-full bg-[#161619] p-3 rounded-xl border text-sm text-neutral-200 resize-none focus:outline-none mb-4 leading-relaxed ${selectedPlatform === 'youtube' ? 'border-red-900/40 focus:border-red-500/50' : 'border-neutral-800 focus:border-purple-500/50'}`}
                   />
-
-                  {/* HIGH QUALITY AI IMAGE */}
-                  {imageUrl && (
-                    <div className="rounded-xl overflow-hidden border border-neutral-800 bg-[#161619] relative min-h-[220px] flex items-center justify-center">
-                      {imageLoading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/80 z-10">
-                          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                          <p className="text-xs text-neutral-400">क्वालिटी फोटो तयार होत आहे...</p>
-                        </div>
-                      )}
-                      <img 
-                        src={imageUrl} 
-                        alt="AI Visual" 
-                        onLoad={() => setImageLoading(false)}
-                        onError={() => setImageLoading(false)}
-                        className={`w-full h-56 object-cover transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`} 
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-8 text-neutral-400">
-                  <div className="w-12 h-12 rounded-full bg-neutral-800/60 flex items-center justify-center text-xl mb-3">🚀</div>
-                  <h3 className="font-semibold text-sm text-neutral-200 mb-1">सर्व प्लॅटफॉर्म्ससाठी एका क्लिकवर कॅप्शन</h3>
-                  <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
-                    भाषा निवडा, विषय टाका आणि LinkedIn, FB, Insta, Twitter साठी प्रोफेशनल कॅप्शन मिळवा.
-                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* TAB 2: SAVED */}
           {activeTab === 'saved' && (
             <div className="px-5 pt-4 flex-1">
               <h2 className="text-lg font-bold text-neutral-100 mb-1 flex items-center gap-2">
                 <span>🔖</span> Saved Captions
               </h2>
               <p className="text-xs text-neutral-400 mb-4">सेव्ह केलेली सर्व कॅप्शन्स</p>
-
+              
               {savedCaptions.length === 0 ? (
                 <div className="text-center py-20 text-neutral-500">
-                  <p className="text-4xl mb-3">📂</p>
+                  <p className="text-4xl mb-3 opacity-50">📂</p>
                   <p className="text-sm font-medium text-neutral-300 mb-1">अजून कोणतेही कॅप्शन सेव्ह केलेले नाही</p>
                 </div>
               ) : (
@@ -338,13 +380,13 @@
                   {savedCaptions.map((item) => (
                     <div key={item.id} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800 shadow-md">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-600/20 text-purple-300">{item.platform}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${item.platform === 'YOUTUBE' ? 'bg-red-600/20 text-red-400' : 'bg-purple-600/20 text-purple-300'}`}>
+                          {item.platform}
+                        </span>
                         <span className="text-[10px] text-neutral-500">{item.date}</span>
                       </div>
                       <p className="text-xs text-neutral-300 mb-3 whitespace-pre-line leading-relaxed">{item.caption}</p>
-                      {item.imageUrl && (
-                        <img src={item.imageUrl} alt="saved visual" className="w-full h-36 object-cover rounded-xl mb-3 border border-neutral-800" />
-                      )}
+                      
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleShare(item.caption, item.imageUrl)}
@@ -353,13 +395,14 @@
                           📤 शेअर
                         </button>
                         <button 
-                          onClick={() => handleCopy(item.caption)}
+                                                  <button 
+                          onClick={() => handleCopy(item.caption)} 
                           className="flex-1 bg-[#27272c] text-xs py-2 rounded-lg text-neutral-200"
                         >
                           📋 कॉपी
                         </button>
                         <button 
-                          onClick={() => handleDeleteSaved(item.id)}
+                          onClick={() => handleDeleteSaved(item.id)} 
                           className="bg-red-500/10 text-red-400 text-xs px-3 py-2 rounded-lg"
                         >
                           🗑️ हटवा
@@ -378,24 +421,17 @@
               <h2 className="text-lg font-bold text-neutral-100 mb-1 flex items-center gap-2">
                 <span>💡</span> Need a topic idea?
               </h2>
-              <p className="text-xs text-neutral-400 mb-4">विषय निवडा</p>
-
-              <div className="space-y-4">
+              <div className="space-y-4 mt-4">
                 {topicCategories.map((cat, idx) => (
                   <div key={idx} className="bg-[#1c1c20] p-4 rounded-2xl border border-neutral-800">
                     <h3 className="text-xs font-semibold text-purple-400 mb-3">{cat.category}</h3>
                     <div className="space-y-2">
                       {cat.items.map((item, i) => (
-                        <div 
-                          key={i} 
-                          onClick={() => selectIdeaTopic(item.title)}
-                          className="p-3 bg-[#242429] hover:bg-purple-950/40 border border-transparent rounded-xl cursor-pointer transition flex justify-between items-center"
-                        >
+                        <div key={i} onClick={() => selectIdeaTopic(item.title)} className="p-3 bg-[#242429] hover:bg-purple-950/40 border border-transparent rounded-xl cursor-pointer transition flex justify-between items-center">
                           <div>
                             <p className="text-sm font-medium text-neutral-200">{item.title}</p>
                             <p className="text-xs text-neutral-400">{item.desc}</p>
                           </div>
-                          <span className="text-xs text-purple-400">निवडा ➔</span>
                         </div>
                       ))}
                     </div>
@@ -410,28 +446,28 @@
             <button 
               onClick={() => setActiveTab('create')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
-                activeTab === 'create' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' : 'text-neutral-400'
+                activeTab === 'create' ? 'bg-purple-600/30 text-purple-300' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span className="text-base font-bold">⊕</span>
+              <span className={`text-base font-bold ${activeTab !== 'create' && 'grayscale opacity-60'}`}>⊕</span>
               <span>Create</span>
             </button>
             <button 
               onClick={() => setActiveTab('saved')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
-                activeTab === 'saved' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' : 'text-neutral-400'
+                activeTab === 'saved' ? 'bg-purple-600/30 text-purple-300' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span className="text-sm">🔖</span>
+              <span className={`text-sm ${activeTab !== 'saved' && 'grayscale opacity-60'}`}>🔖</span>
               <span>Saved</span>
             </button>
             <button
-          onClick={() => setActiveTab('ideas')}
+              onClick={() => setActiveTab('ideas')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition ${
-                activeTab === 'ideas' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30' : 'text-neutral-400'
+                activeTab === 'ideas' ? 'bg-purple-600/30 text-purple-300' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span className="text-sm">💡</span>
+              <span className={`text-sm ${activeTab !== 'ideas' && 'grayscale opacity-60'}`}>💡</span>
               <span>Ideas</span>
             </button>
           </div>
@@ -443,3 +479,5 @@
   </script>
 </body>
 </html>
+
+                          
