@@ -22,15 +22,16 @@
     function App() {
       const [activeTab, setActiveTab] = React.useState('create');
       const [language, setLanguage] = React.useState('en');
-      const [topic, setTopic] = React.useState('');
-      
+      const [targetPlatform, setTargetPlatform] = React.useState('all');
       const [tone, setTone] = React.useState('professional');
       const [length, setLength] = React.useState('medium');
+      const [topic, setTopic] = React.useState('');
+      
       const [useHashtags, setUseHashtags] = React.useState(true);
       const [useEmojis, setUseEmojis] = React.useState(true);
       
       const [captions, setCaptions] = React.useState(null);
-      const [selectedPlatform, setSelectedPlatform] = React.useState('youtube');
+      const [selectedOutputPlatform, setSelectedOutputPlatform] = React.useState('youtube');
       
       const [channelName, setChannelName] = React.useState('');
       const [videoFormat, setVideoFormat] = React.useState('16:9');
@@ -103,12 +104,25 @@
         setIsSaved(false);
         setImageUrl('');
         setCaptions(null);
+        
+        // Auto-select output tab based on choice
+        if (targetPlatform !== 'all' && targetPlatform !== 'youtube_title') {
+            setSelectedOutputPlatform(targetPlatform);
+        } else if (targetPlatform === 'youtube_title') {
+            setSelectedOutputPlatform('youtube');
+        } else {
+            setSelectedOutputPlatform('instagram');
+        }
+
         const cleanTopic = topic.trim();
 
         try {
           setTimeout(() => {
+            const ytTitle = `🔥 ${cleanTopic} | Must Watch!`;
+            const ytDesc = `🎬 व्हिडिओ नक्की पहा: ${cleanTopic}\n\nनमस्कार मित्रांनो! ${channelName ? channelName + ' वर' : 'माझ्या चॅनेलवर'} तुमचे स्वागत आहे. या व्हिडिओमध्ये आपण पाहणार आहोत एक खास विषय. व्हिडिओ आवडल्यास लाईक आणि सबस्क्राईब नक्की करा! \n\n${useHashtags ? '#Trending #YouTube #Video' : ''}`;
+            
             setCaptions({
-              youtube: `🎬 व्हिडिओ नक्की पहा: ${cleanTopic}\n\nनमस्कार मित्रांनो! ${channelName ? channelName + ' वर' : 'माझ्या चॅनेलवर'} तुमचे स्वागत आहे. या व्हिडिओमध्ये आपण पाहणार आहोत एक खास विषय. व्हिडिओ आवडल्यास लाईक आणि सबस्क्राईब नक्की करा! \n\n${useHashtags ? '#Trending #YouTube #Video' : ''}`,
+              youtube: targetPlatform === 'youtube_title' ? ytTitle : ytDesc,
               instagram: `${cleanTopic} ✨\n\nनवीन पोस्ट नक्की चेक करा! ${useEmojis ? '🔥🙌' : ''}\n${useHashtags ? '#InstaGood #Trending' : ''}`,
               linkedin: `Excited to share my thoughts on ${cleanTopic}. Continuous learning is the key to growth. ${useEmojis ? '💼🚀' : ''}\n\n${useHashtags ? '#Professional #Growth #Leadership' : ''}`,
               facebook: `सर्वांना नमस्कार! आजचा विषय: ${cleanTopic}. तुमचा दिवस शुभ जावो! ${useEmojis ? '😊' : ''}`,
@@ -116,7 +130,7 @@
             });
             setImageUrl('https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600&auto=format&fit=crop');
             setLoading(false);
-            showToast('✨ सर्व प्लॅटफॉर्म्ससाठी कॅप्शन तयार!');
+            showToast('✨ कॅप्शन तयार झाले आहे!');
           }, 1500);
         } catch (err) {
           showToast('एरर आला आहे.');
@@ -126,11 +140,11 @@
 
       const handleSave = () => {
         if (!captions) return;
-        const currentText = captions[selectedPlatform];
+        const currentText = captions[selectedOutputPlatform];
         const newItem = {
           id: Date.now(),
           topic: topic.trim() || 'Untitled Post',
-          platform: selectedPlatform.toUpperCase(),
+          platform: selectedOutputPlatform.toUpperCase(),
           caption: currentText,
           imageUrl,
           date: new Date().toLocaleDateString('mr-IN')
@@ -174,6 +188,19 @@
         }
       };
 
+      const getButtonText = () => {
+        if (loading) return 'AI जनरेट करत आहे...';
+        switch (targetPlatform) {
+            case 'youtube': return 'Generate YouTube Caption';
+            case 'youtube_title': return 'Generate YouTube Title';
+            case 'instagram': return 'Generate Instagram Caption';
+            case 'linkedin': return 'Generate LinkedIn Post';
+            case 'facebook': return 'Generate Facebook Post';
+            case 'twitter': return 'Generate X (Twitter) Post';
+            default: return 'Generate All Captions';
+        }
+      };
+
       return (
         <div className="flex flex-col min-h-screen">
           {toast && (
@@ -196,6 +223,7 @@
             <div className="px-5 pt-4 flex-1">
               <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6">
                 
+                {/* 1. Language Selection */}
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-neutral-300 mb-1.5">Language (भाषा)</label>
                   <select 
@@ -209,6 +237,25 @@
                   </select>
                 </div>
 
+                {/* 2. Platform / Purpose Selection (नवीन जोडलेला ड्रॉपडाऊन) */}
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-purple-400 mb-1.5">Platform (कशासाठी पाहिजे?)</label>
+                  <select 
+                    value={targetPlatform} 
+                    onChange={(e) => setTargetPlatform(e.target.value)}
+                    className="w-full bg-[#27272c] border border-purple-500/50 rounded-xl p-3 text-sm text-neutral-100 focus:outline-none focus:border-purple-500 shadow-sm shadow-purple-900/20"
+                  >
+                    <option value="all">🌐 सर्व प्लॅटफॉर्म्स (All in One)</option>
+                    <option value="youtube">▶️ YouTube Caption & Description</option>
+                    <option value="youtube_title">▶️ YouTube Title (फक्त शीर्षक)</option>
+                    <option value="instagram">📸 Instagram Post / Reel</option>
+                    <option value="linkedin">💼 LinkedIn Professional Post</option>
+                    <option value="facebook">📘 Facebook Post</option>
+                    <option value="twitter">🐦 X (Twitter) Post</option>
+                  </select>
+                </div>
+
+                {/* 3. Tone & Length */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-neutral-300 mb-1.5">Tone (कॅप्शन प्रकार)</label>
@@ -237,6 +284,7 @@
                   </div>
                 </div>
 
+                {/* 4. Topic */}
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-medium text-neutral-300">Topic / Title (विषय / शीर्षक)</label>
@@ -256,6 +304,7 @@
                   />
                 </div>
 
+                {/* Extras: Hashtags & Emojis */}
                 <div className="flex gap-5 mb-5 border-t border-neutral-800/80 pt-4">
                   <label className="flex items-center gap-2 text-xs font-medium text-neutral-300 cursor-pointer">
                     <input type="checkbox" checked={useHashtags} onChange={(e)=>setUseHashtags(e.target.checked)} className="w-4 h-4 accent-purple-600 rounded" />
@@ -272,30 +321,33 @@
                   disabled={loading}
                   className="w-full bg-purple-600 hover:bg-purple-500 active:scale-[0.99] text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-50 text-sm"
                 >
-                  <span>✨</span> {loading ? 'AI जनरेट करत आहे...' : 'Generate All Captions'}
+                  <span>✨</span> {getButtonText()}
                 </button>
               </div>
 
+              {/* OUTPUT SECTION */}
               {captions && (
                 <div className="bg-[#1c1c20] rounded-2xl p-5 border border-neutral-800 shadow-xl mb-6 animate-fade-in">
                   
-                  <div className="flex overflow-x-auto gap-1.5 mb-4 bg-[#161619] p-1.5 rounded-xl border border-neutral-800 no-scrollbar">
-                    {['youtube', 'instagram', 'linkedin', 'facebook', 'twitter'].map((plat) => (
-                      <button
-                        key={plat}
-                        onClick={() => setSelectedPlatform(plat)}
-                        className={`flex-1 min-w-[70px] py-2 px-1 text-[11px] font-semibold rounded-lg capitalize transition ${
-                          selectedPlatform === plat 
-                            ? (plat === 'youtube' ? 'bg-red-600 text-white shadow' : 'bg-purple-600 text-white shadow') 
-                            : 'text-neutral-400 hover:text-neutral-200'
-                        }`}
-                      >
-                        {plat === 'twitter' ? 'X (Twitter)' : plat}
-                      </button>
-                    ))}
-                  </div>
+                  {targetPlatform === 'all' && (
+                    <div className="flex overflow-x-auto gap-1.5 mb-4 bg-[#161619] p-1.5 rounded-xl border border-neutral-800 no-scrollbar">
+                      {['youtube', 'instagram', 'linkedin', 'facebook', 'twitter'].map((plat) => (
+                        <button
+                          key={plat}
+                          onClick={() => setSelectedOutputPlatform(plat)}
+                          className={`flex-1 min-w-[70px] py-2 px-1 text-[11px] font-semibold rounded-lg capitalize transition ${
+                            selectedOutputPlatform === plat 
+                              ? (plat === 'youtube' ? 'bg-red-600 text-white shadow' : 'bg-purple-600 text-white shadow') 
+                              : 'text-neutral-400 hover:text-neutral-200'
+                          }`}
+                        >
+                          {plat === 'twitter' ? 'X (Twitter)' : plat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                  {selectedPlatform === 'youtube' && (
+                  {selectedOutputPlatform === 'youtube' && (
                     <div className="bg-red-900/10 border border-red-500/20 p-3.5 rounded-xl mb-4 transition-all">
                       <h4 className="text-xs font-bold text-red-400 mb-2 flex items-center gap-1">
                         <span className="text-sm">▶</span> YouTube Settings
@@ -327,12 +379,12 @@
                   )}
 
                   <div className="flex justify-between items-center mb-3">
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${selectedPlatform === 'youtube' ? 'text-red-400' : 'text-purple-400'}`}>
-                      {selectedPlatform.toUpperCase()} CAPTION
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${selectedOutputPlatform === 'youtube' ? 'text-red-400' : 'text-purple-400'}`}>
+                      {targetPlatform === 'youtube_title' ? 'YOUTUBE TITLE' : `${selectedOutputPlatform.toUpperCase()} CAPTION`}
                     </span>
                     <div className="flex gap-1.5">
                       <button 
-                        onClick={() => handleCopy(captions[selectedPlatform])}
+                        onClick={() => handleCopy(captions[selectedOutputPlatform])}
                         className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1.5 rounded-lg transition"
                       >
                         📋 Copy
@@ -350,13 +402,13 @@
                   </div>
 
                   <textarea 
-                    value={captions[selectedPlatform]}
+                    value={captions[selectedOutputPlatform]}
                     onChange={(e) => {
-                      const updated = { ...captions, [selectedPlatform]: e.target.value };
+                      const updated = { ...captions, [selectedOutputPlatform]: e.target.value };
                       setCaptions(updated);
                     }}
-                    rows={6}
-                    className={`w-full bg-[#161619] p-3 rounded-xl border text-sm text-neutral-200 resize-none focus:outline-none mb-4 leading-relaxed ${selectedPlatform === 'youtube' ? 'border-red-900/40 focus:border-red-500/50' : 'border-neutral-800 focus:border-purple-500/50'}`}
+                    rows={targetPlatform === 'youtube_title' ? 2 : 6}
+                    className={`w-full bg-[#161619] p-3 rounded-xl border text-sm text-neutral-200 resize-none focus:outline-none mb-4 leading-relaxed ${selectedOutputPlatform === 'youtube' ? 'border-red-900/40 focus:border-red-500/50' : 'border-neutral-800 focus:border-purple-500/50'}`}
                   />
                 </div>
               )}
