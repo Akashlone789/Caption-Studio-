@@ -1,139 +1,56 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// तुमच्या .env फाईलमधील Gemini API Key
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'POST') {
+    try {
+      // फ्रंटएंडवरून येणारा सर्व डेटा (नवीन पर्यायांसह)
+      const { 
+        topic, language, platform, tone, length, 
+        useHashtags, useEmojis, channelName, videoFormat 
+      } = req.body;
 
-  const { topic, language } = req.body;
+      // Gemini ला देण्यासाठी डायनॅमिक प्रॉम्प्ट तयार करणे
+      const prompt = `
+        You are an expert social media manager. Create a highly engaging content based on the following details:
+        
+        - Topic: "${topic}"
+        - Target Platform: ${platform} (If youtube_title, write ONLY a catchy title)
+        - Output Language: ${language} (Output strictly in this language: 'mr' for Marathi, 'hi' for Hindi, 'en' for English)
+        - Tone of Voice: ${tone}
+        - Content Length: ${length}
+        - Emojis: ${useEmojis ? 'Include appropriate emojis' : 'Do NOT use emojis'}
+        - Hashtags: ${useHashtags ? 'Include relevant trending hashtags at the end' : 'Do NOT use hashtags'}
+        
+        ${platform === 'youtube' || platform === 'all' ? `
+        - YouTube Specifics: Mention "Welcome to ${channelName || 'my channel'}" and format it for a ${videoFormat} video. Ask viewers to like and subscribe.
+        ` : ''}
 
-  if (!topic) {
-    return res.status(400).json({ error: 'Topic is required' });
-  }
+        Rules:
+        1. Give ONLY the final caption/title text.
+        2. Do NOT write conversational filler like "Here is your caption:" or "Sure!".
+        3. Do NOT use markdown code blocks like \`\`\`.
+      `;
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      // Gemini मॉडेल निवडणे (Free tier साठी gemini-1.5-flash उत्तम आहे)
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  if (!apiKey) {
-    return res.status(500).json({ 
-      error: 'API Key सापडली नाही! Vercel Settings तपासा.' 
-    });
-  }
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
 
-  const langMap = {
-    mr: 'Marathi (मराठी)',
-    hi: 'Hindi (हिंदी)',
-    en: 'English'
-  };
+      // जर platform 'all' असेल, तर तुम्हाला JSON फॉरमॅटमध्ये वेगवेगळ्या प्लॅटफॉर्म्ससाठी कॅप्शन वेगळे करावे लागेल. 
+      // पण सध्या आपण सिंगल टेक्स्ट परत पाठवत आहोत:
+      res.status(200).json({ 
+        captions: {
+          [platform === 'all' ? 'youtube' : platform]: responseText 
+        } 
+      });
 
-  const targetLang = langMap[language] || 'English';
-
-  const systemPrompt = `You are an expert social media manager and copywriter.
-Topic: "${topic}".
-Language: Write completely in ${targetLang}.
-
-Generate professional, high-engaging captions tailored for these 4 platforms:
-1. Instagram: Engaging, trendy, visual-focused, with emojis and popular hashtags.
-2. LinkedIn: Professional, insightful, career/business value with relevant hashtags.
-3. Facebook: Conversational, community-oriented storytelling with emojis.
-4. Twitter (X): Crisp, punchy, under 280 characters with a strong hook.
-
-Also create a 3-5 word concise English photography prompt representing this topic visually.
-
-Return response ONLY in this valid JSON format:
-{
-  "instagram": "Instagram caption text here",
-  "linkedin": "LinkedIn caption text here",
-  "facebook": "Facebook caption text here",
-  "twitter": "Twitter (X) caption text here",
-  "imagePrompt": "concise english visual prompt"
-}`;
-
-  // वापरण्यासाठी मॉडेल्सची यादी (प्राधान्यानुसार)
-  const models = [
-    'models/gemini-3.8-flash',
-    'models/gemini-2.0-flash',
-    'models/gemini-1.5-flash'
-  ];
-
-  let rawText = null;
-  let lastErrorMessage = '';
-
-  // मॉडेल्सवर आळीपाळीने प्रयत्न करणे
-  for (const model of models) {
-    let attempts = 0;
-    // प्रत्येक मॉडेलसाठी २ वेळा प्रयत्न (Retry)
-    while (attempts < 2) {
-      try {
-        const generateUrl = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${apiKey}`;
-
-        const response = await fetch(generateUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          rawText = data.candidates[0].content.parts[0].text;
-          break; // यशस्वी रिस्पॉन्स मिळाला
-        }
-
-        // ५०३ किंवा High demand असल्यास १.५ सेकंद थांबा आणि पुन्हा प्रयत्न करा
-        if (response.status === 503 || data.error?.message?.includes('high demand')) {
-          attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          continue;
-        } else {
-          lastErrorMessage = data.error?.message || 'API Error';
-          break; // इतर एरर असल्यास पुढील मॉडेलकडे वळा
-        }
-      } catch (err) {
-        attempts++;
-        lastErrorMessage = err.message;
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to generate caption' });
     }
-
-    if (rawText) break; // कॅप्शन मिळाल्यास लूप थांबवा
   }
-
-  // जर सर्व मॉडेल्स बिझी असतील तरच एरर पाठवा
-  if (!rawText) {
-    return res.status(503).json({
-      error: `सर्व्हरवर जास्त लोड आहे, कृपया थोड्या वेळाने प्रयत्न करा. (${lastErrorMessage})`
-    });
-  }
-
-  // JSON पार्स करणे
-  let parsed;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch (e) {
-    parsed = {
-      instagram: rawText,
-      linkedin: rawText,
-      facebook: rawText,
-      twitter: rawText,
-      imagePrompt: topic
-    };
-  }
-
-  // AI फोटो URL तयार करणे
-  const seed = Math.floor(Math.random() * 900000) + 100000;
-  const cleanPrompt = encodeURIComponent((parsed.imagePrompt || topic) + ' high quality 4k professional photography');
-  const imageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=800&height=550&nologo=true&seed=${seed}`;
-
-  return res.status(200).json({ 
-    captions: {
-      instagram: parsed.instagram || '',
-      linkedin: parsed.linkedin || '',
-      facebook: parsed.facebook || '',
-      twitter: parsed.twitter || ''
-    },
-    imageUrl: imageUrl 
-  });
 }
