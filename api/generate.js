@@ -19,11 +19,19 @@ export default async function handler(req, res) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // अधिकृत आणि स्टेबल मॉडेल
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const isAllInOne = platform === 'all';
+
+    // JSON आउटपुट खात्रीशीर करण्यासाठी generationConfig जोडले आहे
+    const generationConfig = isAllInOne 
+      ? { responseMimeType: "application/json" } 
+      : {};
+
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig 
+    });
     
     let prompt = "";
-    const isAllInOne = platform === 'all';
 
     // 1. All in One निवडल्यास (JSON आउटपुट)
     if (isAllInOne) {
@@ -34,7 +42,6 @@ export default async function handler(req, res) {
         Include Emojis: ${useEmojis}. Include Hashtags: ${useHashtags}.
         YouTube Specifics: Mention channel "${channelName || 'my channel'}" and format for ${videoFormat} video.
         
-        CRITICAL RULE: You must output ONLY a valid JSON object containing captions customized for each platform. Do not include any text outside the JSON. Do not use markdown blocks like \`\`\`json.
         Format:
         {
           "youtube": "YouTube Video Description here...",
@@ -69,7 +76,7 @@ export default async function handler(req, res) {
     let finalCaptions = {};
 
     if (isAllInOne) {
-      // JSON मधील अतिरिक्त markdown काढून टाकणे
+      // सुरक्षेसाठी अतिरिक्त markdown काढून टाकणे
       responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
       finalCaptions = JSON.parse(responseText);
     } else {
