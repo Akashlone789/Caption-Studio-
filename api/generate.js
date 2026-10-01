@@ -1,26 +1,26 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Vercel मधील तुमची नवीन API Key
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey);
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { 
-      topic, language, platform, tone, length, 
-      useHashtags, useEmojis, channelName, videoFormat 
-    } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ error: 'API key is missing in Vercel settings.' });
     }
 
-    // तुम्ही सांगितलेले मॉडेल: gemini-3.8-flash
-    const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
+    const { 
+      topic, language = 'mr', platform, tone, length, 
+      useHashtags, useEmojis, channelName, videoFormat 
+    } = req.body;
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // अधिकृत आणि स्टेबल मॉडेल
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     let prompt = "";
     const isAllInOne = platform === 'all';
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         Output Language: ${language} ('mr' for Marathi, 'hi' for Hindi, 'en' for English).
         Tone: ${tone}. Length: ${length}.
         Include Emojis: ${useEmojis}. Include Hashtags: ${useHashtags}.
-        ${platform.includes('youtube') ? `YouTube Specifics: Mention channel "${channelName || 'my channel'}" and format for ${videoFormat} video.` : ''}
+        ${platform && platform.includes('youtube') ? `YouTube Specifics: Mention channel "${channelName || 'my channel'}" and format for ${videoFormat} video.` : ''}
 
         CRITICAL RULE: Output ONLY the final text. Do not add conversational filler.
       `;
@@ -77,10 +77,10 @@ export default async function handler(req, res) {
       finalCaptions[key] = responseText;
     }
 
-    res.status(200).json({ captions: finalCaptions });
+    return res.status(200).json({ captions: finalCaptions });
 
   } catch (error) {
     console.error("API Error:", error);
-    res.status(500).json({ error: 'Failed to generate caption.', details: error.message });
+    return res.status(500).json({ error: 'Failed to generate caption.', details: error.message });
   }
-      }
+}
